@@ -10,13 +10,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' https: 'unsafe-inline' 'unsafe-eval'; style-src 'self' https: 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' https: data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' https: 'unsafe-inline' 'unsafe-eval'; style-src 'self' https: 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' https: data:; connect-src 'self' https: ws: wss:;">
     <style>
         :root {
-        --neumorphic-bg: #e9e9e9;
+        --neumorphic-bg: #fafafa;
         --neumorphic-light-shadow: rgba(255, 255, 255, 0.5);
         --neumorphic-dark-shadow: rgba(163, 177, 198, 0.6);
-        --neumorphic-text-primary: #5a84a2;
+        --neumorphic-text-primary: #0d4a75;
         --neumorphic-text-secondary: #6d7f91;
         --primary-blue: #002B7F;
         --accent-red: #E31B23;
@@ -689,6 +689,10 @@
         -ms-overflow-style: -ms-autohiding-scrollbar;
     }
 
+    .search-bar-container {
+        padding-left: 38px;
+    }
+
     /* Custom scrollbar for the mobile filter menu */
     .mobile-filter-menu {
         scrollbar-width: thin;
@@ -756,6 +760,7 @@
         <!-- Mobile Filter Toggle Button -->
         <button class="mobile-filter-toggle btn" style="position: fixed; top: 30px; left: 5px; z-index: 1000; border-radius: 50%; width: 40px; height: 40px; background: var(--neumorphic-bg); box-shadow: 5px 5px 10px var(--neumorphic-dark-shadow), -5px -5px 10px var(--neumorphic-light-shadow);">
             <i class="fas fa-filter"></i>
+            <span class="d-none d-md-block" style="position: absolute; top: 50%; left: 50%; transform: translate(150%, -50%); font-size: 12px; color: var(--neumorphic-text-primary);">Filter</span>
         </button>
 
         <!-- Mobile Filter Menu -->
@@ -855,7 +860,7 @@
                 };
 
     return `
-                    <div class="col-lg-12 col-md-12 mb-4 partner-card" data-category="${sanitizedPartner.category}">
+                    <div class="col-lg-12 col-md-12 mb-4 partner-card" data-category="${sanitizedPartner.category.toLowerCase()}">
                         <div class="card" data-partner-id="${partner.id || ''}">
                             <div class="card-content">
                 <!-- First row: 3-6-3 layout -->
@@ -973,40 +978,57 @@
             }
 
             // Update search functionality
-            $('#search-input').on('input', debounce(function() {
-                const searchTerm = validateSearchInput($(this).val().toLowerCase());
-                const filteredPartners = partnersData.filter(partner => 
-                    partner.name.toLowerCase().includes(searchTerm) || 
-                    partner.tags.some(tag => tag.toLowerCase().includes(searchTerm))
-                );
-                populatePartners(filteredPartners);
-            }, 300));
+            $('#search-input').on('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                console.log('Searching for:', searchTerm);
 
-            // Filter functionality
-            $('.filter-btn').click(function() {
-                const category = $(this).data('category');
-                console.log('Filter clicked:', category); // Debug log
+                $('.partner-card').each(function() {
+                    const $card = $(this);
+                    const name = $card.find('.partner-name').text().toLowerCase();
+                    const description = $card.find('.partner-description').text().toLowerCase();
+                    const tags = $card.find('.tag').text().toLowerCase();
+
+                    if (name.includes(searchTerm) || 
+                        description.includes(searchTerm) || 
+                        tags.includes(searchTerm)) {
+                        $card.show();
+                    } else {
+                        $card.hide();
+                    }
+                });
+            });
+
+            // Handle filter clicks (both mobile and desktop)
+            $(document).on('click', '.filter-btn', function() {
+                const selectedCategory = $(this).data('category').toLowerCase();
+                console.log('Selected category:', selectedCategory);
                 
-                // Update active state of filter buttons
+                // Update active state of all filter buttons
                 $('.filter-btn').removeClass('active');
                 $(this).addClass('active');
                 
-                if (category === 'all') {
+                // Filter the partners
+                if (selectedCategory === 'all') {
                     $('.partner-card').fadeIn();
                 } else {
                     $('.partner-card').each(function() {
-                        const cardCategory = $(this).data('category');
-                        console.log('Card category:', cardCategory); // Debug log
+                        const cardCategory = $(this).attr('data-category').toLowerCase();
+                        console.log('Card category:', cardCategory);
                         
-                        if (cardCategory === category) {
+                        if (cardCategory === selectedCategory) {
                             $(this).fadeIn();
                         } else {
                             $(this).fadeOut();
                         }
                     });
                 }
+                
+                // Close mobile menu if open
+                $('.mobile-filter-menu').removeClass('show');
+                $('body').css('overflow', '');
             });
 
+            // Mobile filter toggle handlers
             $('.mobile-filter-toggle').click(function() {
                 $('.mobile-filter-menu').addClass('show');
                 $('body').css('overflow', 'hidden'); // Prevent scrolling when menu is open
